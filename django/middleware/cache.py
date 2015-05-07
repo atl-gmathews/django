@@ -43,13 +43,10 @@ More details about how the caching works:
 
 """
 
-import warnings
-
 from django.conf import settings
 from django.core.cache import caches, DEFAULT_CACHE_ALIAS
 from django.utils.cache import (get_cache_key, get_max_age, has_vary_header,
     learn_cache_key, patch_response_headers)
-from django.utils.deprecation import RemovedInDjango18Warning
 
 
 class UpdateCacheMiddleware(object):
@@ -200,9 +197,5 @@ class CacheMiddleware(UpdateCacheMiddleware, FetchFromCacheMiddleware):
         if cache_anonymous_only is None:
             cache_anonymous_only = getattr(settings, 'CACHE_MIDDLEWARE_ANONYMOUS_ONLY', False)
         self.cache_anonymous_only = cache_anonymous_only
-
-        if self.cache_anonymous_only:
-            msg = "CACHE_MIDDLEWARE_ANONYMOUS_ONLY has been deprecated and will be removed in Django 1.8."
-            warnings.warn(msg, RemovedInDjango18Warning, stacklevel=1)
 
         self.cache = caches[self.cache_alias]
