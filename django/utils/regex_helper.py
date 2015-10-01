@@ -7,6 +7,8 @@ should be good enough for a large class of URLS, however.
 """
 from __future__ import unicode_literals
 
+from threading import local
+
 from django.utils import six
 from django.utils.six.moves import zip
 
@@ -46,6 +48,8 @@ class NonCapture(list):
     Used to represent a non-capturing group in the pattern string.
     """
 
+_normalized = local()
+_normalized.results = {}
 
 def normalize(pattern):
     """
@@ -69,6 +73,13 @@ def normalize(pattern):
     resolving can be done using positional args when keyword args are
     specified, the two cannot be mixed in the same reverse() call.
     """
+    if pattern not in _normalized.results:
+        _normalized.results[pattern] = _normalize(pattern)
+
+    # Return a copy of the list to avoid corrupting the cache
+    return list(_normalized.results[pattern])
+
+def _normalize(pattern):
     # Do a linear scan to work out the special features of this pattern. The
     # idea is that we scan once here and collect all the information we need to
     # make future decisions.
