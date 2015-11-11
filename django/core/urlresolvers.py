@@ -421,15 +421,15 @@ class RegexURLResolver(LocaleRegexProvider):
             raise NoReverseMatch("Error importing '%s': %s." % (lookup_view, e))
         possibilities = self.reverse_dict.getlist(lookup_view)
 
+        prefix_norm, prefix_args = normalize(urlquote(_prefix))[0]
         for possibility, pattern, defaults in possibilities:
             for result, params in possibility:
                 if args:
-                    if len(args) != len(params):
+                    if len(args) != len(params) + len(prefix_args):
                         continue
-                    candidate_subs = dict(zip(params, text_args))
+                    candidate_subs = dict(zip(prefix_args + params, text_args))
                 else:
-                    if (set(kwargs.keys()) | set(defaults.keys()) != set(params) |
-                            set(defaults.keys())):
+                    if set(kwargs.keys()) | set(defaults.keys()) != set(params) | set(defaults.keys()) | set(prefix_args):
                         continue
                     matches = True
                     for k, v in defaults.items():
@@ -444,10 +444,14 @@ class RegexURLResolver(LocaleRegexProvider):
                 # without quoting to build a decoded URL and look for a match.
                 # Then, if we have a match, redo the substitution with quoted
                 # arguments in order to return a properly encoded URL.
-                candidate_pat = _prefix.replace('%', '%%') + result
-                if re.search('^%s%s' % (re.escape(_prefix), pattern), candidate_pat % candidate_subs, re.UNICODE):
+                candidate_pat = prefix_norm.replace('%', '%%') + result
+                if re.search('^%s%s' % (prefix_norm, pattern), candidate_pat % candidate_subs, re.UNICODE):
                     # safe characters from `pchar` definition of RFC 3986
-                    url = urlquote(candidate_pat % candidate_subs, safe=RFC3986_SUBDELIMS + str('/~:@'))
+                    candidate_subs = dict((k, urlquote(v, safe=RFC3986_SUBDELIMS + str('/~:@')))
+                                          for (k, v) in candidate_subs.items())
+
+                    url = candidate_pat % candidate_subs
+
                     # Don't allow construction of scheme relative urls.
                     if url.startswith('//'):
                         url = '/%%2F%s' % url[2:]
